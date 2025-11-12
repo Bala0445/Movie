@@ -1,0 +1,70 @@
+.home {
+  background-color: #0b0b0b;
+  color: white;
+  height: 100vh;
+  position: relative;
+  text-align: center;
+}
+
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 30px;
+}
+
+.left {
+  display: flex;
+  align-items: center;
+}
+
+.logo {
+  width: 40px;
+  margin-right: 10px;
+}
+
+.brand {
+  font-size: 22px;
+  font-family: "Poppins", sans-serif;
+  letter-spacing: 1px;
+  color: #ff4081;
+}
+
+.nav-btn {
+  background: linear-gradient(90deg, #ff005a, #ff4081);
+  color: white;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 10px;
+  margin-left: 10px;
+  text-decoration: none;
+  transition: 0.3s ease;
+}
+
+.nav-btn:hover {
+  transform: scale(1.05);
+}
+
+.center-logo {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.big-logo {
+  width: 150px;
+  filter: blur(3px);
+  animation: glow 2s infinite alternate;
+}
+
+@keyframes glow {
+  from { filter: blur(3px) brightness(0.8); }
+  to { filter: blur(0) brightness(1.5); }
+}
+
+.app-title {
+  margin-top: 20px;
+  font-size: 40px;
+  color: #ff4081;
+}

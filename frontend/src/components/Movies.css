@@ -1,0 +1,67 @@
+.movies-page {
+  background-color: #121212;
+  color: white;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.tab-btn {
+  background: linear-gradient(90deg, #ff005a, #ff4081);
+  border: none;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  margin-right: 10px;
+}
+
+.search-bar {
+  background: #1f1f1f;
+  color: white;
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+  width: 200px;
+}
+
+.movie-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  justify-items: center;
+}
+
+.movie-card {
+  background: #1f1f1f;
+  padding: 15px;
+  border-radius: 10px;
+  text-align: center;
+}
+
+.reviews-section {
+  text-align: center;
+}
+
+.review-form {
+  margin-top: 20px;
+}
+
+.review-form input,
+.review-form textarea {
+  display: block;
+  width: 80%;
+  margin: 10px auto;
+  padding: 10px;
+  border: none;
+  border-radius: 8px;
+  background: #2c2c2c;
+  color: white;
+}

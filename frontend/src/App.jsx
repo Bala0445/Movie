@@ -1,18 +1,27 @@
-import { Outlet } from "react-router-dom";
-import { ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
-import Navigation from "./pages/Auth/Navigation";
+import React from "react";
+import { Routes, Route } from "react-router-dom";
+import Navbar from "./components/Navbar";
+import Home from "./components/Home";
+import Login from "./components/Login";
+import Register from "./components/Register";
+import Movies from "./components/Movies";
+import Reviews from "./components/Reviews";
+import NotFound from "./pages/NotFound";
 
-const App = () => {
+export default function App() {
   return (
-    <>
-      <ToastContainer />
-      <Navigation />
-      <main className="py-3">
-        <Outlet />
+    <div className="app dark-mode">
+      <Navbar />
+      <main>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/movies" element={<Movies />} />
+          <Route path="/reviews" element={<Reviews />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
       </main>
-    </>
+    </div>
   );
-};
-
-export default App;
+}

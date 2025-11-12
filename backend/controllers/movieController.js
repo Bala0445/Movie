@@ -1,181 +1,104 @@
-import Movie from "../models/Movie.js";
+import Movie from '../models/Movie.js'
+import Comment from '../models/Comment.js'
+import User from '../models/User.js'
 
-const createMovie = async (req, res) => {
+// GET /api/movies?q=...
+export const getMovies = async (req, res) => {
   try {
-    const newMovie = new Movie(req.body);
-    const savedMovie = await newMovie.save();
-    res.json(savedMovie);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+    const { q } = req.query
+    const query = q ? { title: { $regex: q, $options: 'i' } } : {}
+    const movies = await Movie.find(query).limit(200)
+    res.json(movies)
+  } catch (err) {
+    console.error('getMovies error', err)
+    res.status(500).json({ message: 'Server error' })
   }
-};
+}
 
-const getAllMovies = async (req, res) => {
+// GET /api/movies/:id
+export const getMovie = async (req, res) => {
   try {
-    const movies = await Movie.find();
-    res.json(movies);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+    const movie = await Movie.findById(req.params.id)
+    if (!movie) return res.status(404).json({ message: 'Not found' })
+    const comments = await Comment.find({ movie: movie._id }).sort({ createdAt: -1 })
+    res.json({ movie, comments })
+  } catch (err) {
+    console.error('getMovie error', err)
+    res.status(500).json({ message: 'Server error' })
   }
-};
+}
 
-const getSpecificMovie = async (req, res) => {
+// POST /api/movies/:id/position
+export const savePosition = async (req, res) => {
   try {
-    const { id } = req.params;
-    const specificMovie = await Movie.findById(id);
-    if (!specificMovie) {
-      return res.status(404).json({ message: "Movie not found" });
-    }
+    const { position } = req.body
+    const movieId = req.params.id
 
-    res.json(specificMovie);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
-
-const updateMovie = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const updatedMovie = await Movie.findByIdAndUpdate(id, req.body, {
-      new: true,
-    });
-
-    if (!updatedMovie) {
-      return res.status(404).json({ message: "Movie not found" });
-    }
-
-    res.json(updatedMovie);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
-
-const movieReview = async (req, res) => {
-  try {
-    const { rating, comment } = req.body;
-    const movie = await Movie.findById(req.params.id);
-
-    if (movie) {
-      const alreadyReviewed = movie.reviews.find(
-        (r) => r.user.toString() === req.user._id.toString()
-      );
-
-      if (alreadyReviewed) {
-        res.status(400);
-        throw new Error("Movie already reviewed");
+    // If user info present (optional), try saving; otherwise ignore and return success
+    // (keeps API tolerant when not logged)
+    const tokenUser = req.user // if using auth middleware
+    if (tokenUser) {
+      const user = await User.findById(tokenUser._id)
+      if (user) {
+        const existing = user.watchPositions.find(w => w.movie.toString() === movieId)
+        if (existing) existing.position = position
+        else user.watchPositions.push({ movie: movieId, position })
+        await user.save()
       }
-
-      const review = {
-        name: req.user.username,
-        rating: Number(rating),
-        comment,
-        user: req.user._id,
-      };
-
-      movie.reviews.push(review);
-      movie.numReviews = movie.reviews.length;
-      movie.rating =
-        movie.reviews.reduce((acc, item) => item.rating + acc, 0) /
-        movie.reviews.length;
-
-      await movie.save();
-      res.status(201).json({ message: "Review Added" });
-    } else {
-      res.status(404);
-      throw new Error("Movie not found");
     }
-  } catch (error) {
-    console.error(error);
-    res.status(400).json(error.message);
+    res.json({ message: 'Saved' })
+  } catch (err) {
+    console.error('savePosition error', err)
+    res.status(500).json({ message: 'Server error' })
   }
-};
+}
 
-const deleteMovie = async (req, res) => {
+// POST /api/movies/:id/comment
+// **Public**: anyone can post a comment. If request contains username or token, use that; else store as "Anonymous".
+export const postComment = async (req, res) => {
   try {
-    const { id } = req.params;
-    const deleteMovie = await Movie.findByIdAndDelete(id);
+    const { text, username } = req.body
+    if (!text || !text.trim()) return res.status(400).json({ message: 'Text required' })
 
-    if (!deleteMovie) {
-      return res.status(404).json({ message: "Movie not found" });
-    }
+    const movieId = req.params.id
+    const movie = await Movie.findById(movieId)
+    if (!movie) return res.status(404).json({ message: 'Movie not found' })
 
-    res.json({ message: "Movie Deleted Successfully" });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+    // If auth middleware sets req.user, prefer that username
+    let commenter = 'Anonymous'
+    if (req.user && req.user.username) commenter = req.user.username
+    if (username) commenter = username // allow client-provided username (if you want)
+
+    const comment = await Comment.create({
+      movie: movieId,
+      user: req.user ? req.user._id : null,
+      username: commenter,
+      text: text.trim(),
+      likes: 0,
+      likedBy: []
+    })
+
+    res.status(201).json(comment)
+  } catch (err) {
+    console.error('postComment error', err)
+    res.status(500).json({ message: 'Server error' })
   }
-};
+}
 
-const deleteComment = async (req, res) => {
+// POST /api/movies/comment/:commentId/like
+// Allow likes without login (toggle by client IP/userless). If you want to require auth later, add middleware.
+export const toggleLike = async (req, res) => {
   try {
-    const { movieId, reviewId } = req.body;
-    const movie = await Movie.findById(movieId);
+    const commentId = req.params.commentId
+    const comment = await Comment.findById(commentId)
+    if (!comment) return res.status(404).json({ message: 'Not found' })
 
-    if (!movie) {
-      return res.status(404).json({ message: "Movie not found" });
-    }
-
-    const reviewIndex = movie.reviews.findIndex(
-      (r) => r._id.toString() === reviewId
-    );
-
-    if (reviewIndex === -1) {
-      return res.status(404).json({ message: "Comment not found" });
-    }
-
-    movie.reviews.splice(reviewIndex, 1);
-    movie.numReviews = movie.reviews.length;
-    movie.rating =
-      movie.reviews.length > 0
-        ? movie.reviews.reduce((acc, item) => item.rating + acc, 0) /
-          movie.reviews.length
-        : 0;
-
-    await movie.save();
-    res.json({ message: "Comment Deleted Successfully" });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: error.message });
+    // keep simple: increment likes (no user dedupe) so anyone can like multiple times if desired
+    comment.likes = (comment.likes || 0) + 1
+    await comment.save()
+    res.json({ likes: comment.likes })
+  } catch (err) {
+    console.error('toggleLike error', err)
+    res.status(500).json({ message: 'Server error' })
   }
-};
-
-const getNewMovies = async (req, res) => {
-  try {
-    const newMovies = await Movie.find().sort({ createdAt: -1 }).limit(10);
-    res.json(newMovies);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
-
-const getTopMovies = async (req, res) => {
-  try {
-    const topRatedMovies = await Movie.find()
-      .sort({ numReviews: -1 })
-      .limit(10);
-    res.json(topRatedMovies);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
-
-const getRandomMovies = async (req, res) => {
-  try {
-    const randomMovies = await Movie.aggregate([{ $sample: { size: 10 } }]);
-    res.json(randomMovies);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
-
-export {
-  createMovie,
-  getAllMovies,
-  getSpecificMovie,
-  updateMovie,
-  movieReview,
-  deleteMovie,
-  deleteComment,
-  getNewMovies,
-  getTopMovies,
-  getRandomMovies,
-};
+}
