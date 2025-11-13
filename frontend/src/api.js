@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const API = axios.create({
-  baseURL: "http://localhost:5000/api", // change if your backend base differs
+  baseURL: "https://movie-8ccf.onrender.com/api", // change if your backend base differs
 });
 
 // attach token if present
