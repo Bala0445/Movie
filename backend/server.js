@@ -14,6 +14,10 @@ app.use("/api/reviews", reviewRoutes);
 app.use(cors());
 app.use(express.json());
 
+app.get("/", (req, res) => {
+  res.send("API is running...");
+});
+
 // ✅ your routes come after app is defined
 app.use("/api/users", userRoutes);
 app.use("/api/movies", movieRoutes);
